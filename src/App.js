@@ -23,10 +23,8 @@ function SetupPage({ onSave }) {
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         <h1 style={{ textAlign: "center", color: "#D85A30", marginBottom: 8, fontSize: 28 }}>🐾 PawBook</h1>
         <p style={{ textAlign: "center", color: "#999", marginBottom: 24 }}>先幫你的寵物建立檔案！</p>
-
         <div style={{ background: "white", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
           <div style={{ textAlign: "center", fontSize: 72, marginBottom: 16 }}>{emoji}</div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>選擇大頭貼</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -38,27 +36,16 @@ function SetupPage({ onSave }) {
               ))}
             </div>
           </div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>寵物名字</label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="例如：旺財、咪咪"
-              style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }}
-            />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="例如：旺財、咪咪"
+              style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }} />
           </div>
-
           <div style={{ marginBottom: 24 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>物種 / 品種</label>
-            <input
-              value={species}
-              onChange={e => setSpecies(e.target.value)}
-              placeholder="例如：柴犬、布偶貓、荷蘭侏儒兔"
-              style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }}
-            />
+            <input value={species} onChange={e => setSpecies(e.target.value)} placeholder="例如：柴犬、布偶貓"
+              style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }} />
           </div>
-
           <button onClick={handleSave}
             style={{ width: "100%", background: "#D85A30", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
             建立寵物檔案 🐾
@@ -101,13 +88,9 @@ function ComposeBox({ pet, onPost }) {
     <div style={{ background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 36 }}>{pet.emoji}</div>
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder={`${pet.name}今天想說什麼？`}
-          rows={3}
-          style={{ flex: 1, border: "1px solid #eee", borderRadius: 12, padding: 12, fontSize: 14, resize: "none", outline: "none", fontFamily: "inherit" }}
-        />
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          placeholder={pet.name + "今天想說什麼？"} rows={3}
+          style={{ flex: 1, border: "1px solid #eee", borderRadius: 12, padding: 12, fontSize: 14, resize: "none", outline: "none", fontFamily: "inherit" }} />
       </div>
       <div style={{ textAlign: "right" }}>
         <button onClick={handlePost}
@@ -122,10 +105,6 @@ function ComposeBox({ pet, onPost }) {
 export default function App() {
   const [pet, setPet] = useState(null);
   const [posts, setPosts] = useState(initialPosts);
-
-  function handleSavePet(petData) {
-    setPet(petData);
-  }
 
   function handlePost(text) {
     const newPost = {
@@ -147,7 +126,7 @@ export default function App() {
     ));
   }
 
-  if (!pet) return <SetupPage onSave={handleSavePet} />;
+  if (!pet) return <SetupPage onSave={setPet} />;
 
   return (
     <div style={{ background: "#f7f3ef", minHeight: "100vh", padding: 20 }}>
@@ -166,3 +145,4 @@ export default function App() {
       </div>
     </div>
   );
+}
