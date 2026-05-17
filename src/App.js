@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { auth, db } from "./firebase";
 import {
   createUserWithEmailAndPassword,
@@ -16,12 +16,13 @@ import {
   doc,
   arrayUnion,
   arrayRemove,
+  setDoc,
+  getDoc,
 } from "firebase/firestore";
 
 const emojiList = ["🐶","🐱","🐰","🐹","🐻","🐼","🐨","🦊","🐯","🦁","🐮","🐷","🐸","🐵","🦜","🐠","🐢","🦎"];
 
-// 登入/註冊頁面
-function AuthPage({ onAuth }) {
+function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +54,6 @@ function AuthPage({ onAuth }) {
       <div style={{ background: "white", borderRadius: 20, padding: 32, width: "100%", maxWidth: 400, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
         <h1 style={{ textAlign: "center", color: "#D85A30", marginBottom: 8, fontSize: 32 }}>🐾 PawBook</h1>
         <p style={{ textAlign: "center", color: "#999", marginBottom: 28, fontSize: 14 }}>寵物的社群媒體</p>
-
         <div style={{ display: "flex", background: "#f5f5f5", borderRadius: 10, padding: 4, marginBottom: 24 }}>
           <button onClick={() => setIsLogin(true)}
             style={{ flex: 1, padding: "8px 0", border: "none", borderRadius: 8, background: isLogin ? "white" : "transparent", fontWeight: isLogin ? 600 : 400, cursor: "pointer", fontSize: 14, boxShadow: isLogin ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
@@ -64,21 +64,17 @@ function AuthPage({ onAuth }) {
             註冊
           </button>
         </div>
-
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>Email</label>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" type="email"
             style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "12px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }} />
         </div>
-
         <div style={{ marginBottom: 24 }}>
           <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>密碼</label>
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 6 個字元" type="password"
             style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "12px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }} />
         </div>
-
         {error && <div style={{ color: "#e53e3e", fontSize: 13, marginBottom: 16, textAlign: "center" }}>{error}</div>}
-
         <button onClick={handleSubmit} disabled={loading}
           style={{ width: "100%", background: "#D85A30", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontSize: 16, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
           {loading ? "處理中..." : isLogin ? "登入" : "註冊"}
@@ -88,7 +84,6 @@ function AuthPage({ onAuth }) {
   );
 }
 
-// 建立寵物檔案
 function SetupPage({ user, onSave }) {
   const [name, setName] = useState("");
   const [species, setSpecies] = useState("");
@@ -100,6 +95,7 @@ function SetupPage({ user, onSave }) {
     if (!name.trim() || !species.trim()) return alert("請填寫名字和物種！");
     setLoading(true);
     const petData = { name, species, gender, emoji, ownerId: user.uid, ownerEmail: user.email };
+    await setDoc(doc(db, "pets", user.uid), petData);
     onSave(petData);
     setLoading(false);
   }
@@ -111,7 +107,6 @@ function SetupPage({ user, onSave }) {
         <p style={{ textAlign: "center", color: "#999", marginBottom: 24 }}>幫你的寵物建立檔案！</p>
         <div style={{ background: "white", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
           <div style={{ textAlign: "center", fontSize: 72, marginBottom: 16 }}>{emoji}</div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>選擇大頭貼</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -123,19 +118,16 @@ function SetupPage({ user, onSave }) {
               ))}
             </div>
           </div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>寵物名字</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="例如：旺財、咪咪"
               style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }} />
           </div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>物種 / 品種</label>
             <input value={species} onChange={e => setSpecies(e.target.value)} placeholder="例如：柴犬、布偶貓"
               style={{ width: "100%", border: "1px solid #eee", borderRadius: 10, padding: "10px 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }} />
           </div>
-
           <div style={{ marginBottom: 24 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>性別</label>
             <div style={{ display: "flex", gap: 12 }}>
@@ -147,7 +139,6 @@ function SetupPage({ user, onSave }) {
               ))}
             </div>
           </div>
-
           <button onClick={handleSave} disabled={loading}
             style={{ width: "100%", background: "#D85A30", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
             {loading ? "建立中..." : "建立寵物檔案 🐾"}
@@ -158,7 +149,6 @@ function SetupPage({ user, onSave }) {
   );
 }
 
-// 貼文卡片
 function PostCard({ post, currentUser, onLike }) {
   const liked = post.likes?.includes(currentUser?.uid);
   return (
@@ -179,34 +169,28 @@ function PostCard({ post, currentUser, onLike }) {
   );
 }
 
-// 主頁面
 function HomePage({ user, pet }) {
   const [posts, setPosts] = useState([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadPosts();
-  }, []);
+  useEffect(() => { loadPosts(); }, []);
 
   async function loadPosts() {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
-    setPosts(snap.docs.map(d => ({ id: d.id, ...d.data(), time: "剛剛" })));
+    setPosts(snap.docs.map(d => ({
+      id: d.id, ...d.data(),
+      time: d.data().createdAt?.toDate ? d.data().createdAt.toDate().toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "剛剛"
+    })));
   }
 
   async function handlePost() {
     if (!text.trim()) return;
     setLoading(true);
     await addDoc(collection(db, "posts"), {
-      petName: pet.name,
-      species: pet.species,
-      gender: pet.gender,
-      emoji: pet.emoji,
-      ownerId: user.uid,
-      content: text,
-      likes: [],
-      createdAt: new Date(),
+      petName: pet.name, species: pet.species, gender: pet.gender,
+      emoji: pet.emoji, ownerId: user.uid, content: text, likes: [], createdAt: new Date(),
     });
     setText("");
     await loadPosts();
@@ -216,9 +200,7 @@ function HomePage({ user, pet }) {
   async function handleLike(post) {
     const ref = doc(db, "posts", post.id);
     const liked = post.likes?.includes(user.uid);
-    await updateDoc(ref, {
-      likes: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
-    });
+    await updateDoc(ref, { likes: liked ? arrayRemove(user.uid) : arrayUnion(user.uid) });
     await loadPosts();
   }
 
@@ -237,7 +219,6 @@ function HomePage({ user, pet }) {
             </button>
           </div>
         </div>
-
         <div style={{ background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 36 }}>{pet.emoji}</div>
@@ -252,7 +233,6 @@ function HomePage({ user, pet }) {
             </button>
           </div>
         </div>
-
         {posts.map(post => (
           <PostCard key={post.id} post={post} currentUser={user} onLike={handleLike} />
         ))}
@@ -261,15 +241,20 @@ function HomePage({ user, pet }) {
   );
 }
 
-// 主程式
 export default function App() {
   const [user, setUser] = useState(null);
   const [pet, setPet] = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      if (u) {
+        const petSnap = await getDoc(doc(db, "pets", u.uid));
+        if (petSnap.exists()) setPet(petSnap.data());
+      } else {
+        setPet(null);
+      }
       setChecking(false);
     });
     return unsub;
