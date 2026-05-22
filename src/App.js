@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth, db } from "./firebase";
 import {
   createUserWithEmailAndPassword,
@@ -19,8 +19,20 @@ import {
   setDoc,
   getDoc,
 } from "firebase/firestore";
+import axios from "axios";
+
+const CLOUD_NAME = "dhjpdlp7v";
+const UPLOAD_PRESET = "pawbook_upload";
 
 const emojiList = ["🐶","🐱","🐰","🐹","🐻","🐼","🐨","🦊","🐯","🦁","🐮","🐷","🐸","🐵","🦜","🐠","🐢","🦎"];
+
+async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+  const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, formData);
+  return res.data.secure_url;
+}
 
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -89,12 +101,28 @@ function SetupPage({ user, onSave }) {
   const [species, setSpecies] = useState("");
   const [gender, setGender] = useState("男生");
   const [emoji, setEmoji] = useState("🐶");
+  const [photo, setPhoto] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const fileRef = useRef();
+
+  function handlePhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result);
+    reader.readAsDataURL(file);
+  }
 
   async function handleSave() {
     if (!name.trim() || !species.trim()) return alert("請填寫名字和物種！");
     setLoading(true);
-    const petData = { name, species, gender, emoji, ownerId: user.uid, ownerEmail: user.email };
+    let photoURL = null;
+    if (photoFile) {
+      photoURL = await uploadImage(photoFile);
+    }
+    const petData = { name, species, gender, emoji, photoURL, ownerId: user.uid, ownerEmail: user.email };
     await setDoc(doc(db, "pets", user.uid), petData);
     onSave(petData);
     setLoading(false);
@@ -106,18 +134,36 @@ function SetupPage({ user, onSave }) {
         <h1 style={{ textAlign: "center", color: "#D85A30", marginBottom: 8, fontSize: 28 }}>🐾 PawBook</h1>
         <p style={{ textAlign: "center", color: "#999", marginBottom: 24 }}>幫你的寵物建立檔案！</p>
         <div style={{ background: "white", borderRadius: 16, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-          <div style={{ textAlign: "center", fontSize: 72, marginBottom: 16 }}>{emoji}</div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>選擇大頭貼</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {emojiList.map(e => (
-                <button key={e} onClick={() => setEmoji(e)}
-                  style={{ fontSize: 24, background: emoji === e ? "#FAECE7" : "#f5f5f5", border: emoji === e ? "2px solid #D85A30" : "2px solid transparent", borderRadius: 10, width: 44, height: 44, cursor: "pointer" }}>
-                  {e}
-                </button>
-              ))}
+
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <div onClick={() => fileRef.current.click()} style={{ cursor: "pointer", display: "inline-block" }}>
+              {photo ? (
+                <img src={photo} alt="寵物" style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: "3px solid #D85A30" }} />
+              ) : (
+                <div style={{ width: 100, height: 100, borderRadius: "50%", background: "#FAECE7", border: "3px dashed #D85A30", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#D85A30" }}>
+                  <div style={{ fontSize: 28 }}>📷</div>
+                  上傳照片
+                </div>
+              )}
             </div>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
+            {photo && <div onClick={() => { setPhoto(null); setPhotoFile(null); }} style={{ marginTop: 8, fontSize: 12, color: "#999", cursor: "pointer" }}>移除照片</div>}
           </div>
+
+          {!photo && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>或選擇表情符號</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {emojiList.map(e => (
+                  <button key={e} onClick={() => setEmoji(e)}
+                    style={{ fontSize: 24, background: emoji === e ? "#FAECE7" : "#f5f5f5", border: emoji === e ? "2px solid #D85A30" : "2px solid transparent", borderRadius: 10, width: 44, height: 44, cursor: "pointer" }}>
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>寵物名字</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="例如：旺財、咪咪"
@@ -140,8 +186,8 @@ function SetupPage({ user, onSave }) {
             </div>
           </div>
           <button onClick={handleSave} disabled={loading}
-            style={{ width: "100%", background: "#D85A30", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
-            {loading ? "建立中..." : "建立寵物檔案 🐾"}
+            style={{ width: "100%", background: "#D85A30", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontSize: 16, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
+            {loading ? "上傳中..." : "建立寵物檔案 🐾"}
           </button>
         </div>
       </div>
@@ -149,12 +195,19 @@ function SetupPage({ user, onSave }) {
   );
 }
 
+function Avatar({ pet, size = 44 }) {
+  if (pet.photoURL) {
+    return <img src={pet.photoURL} alt={pet.petName || pet.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+  }
+  return <div style={{ fontSize: size * 0.7, lineHeight: 1, flexShrink: 0 }}>{pet.emoji}</div>;
+}
+
 function PostCard({ post, currentUser, onLike }) {
   const liked = post.likes?.includes(currentUser?.uid);
   return (
     <div style={{ background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <div style={{ fontSize: 40 }}>{post.emoji}</div>
+        <Avatar pet={post} size={44} />
         <div>
           <div style={{ fontWeight: 600, fontSize: 16 }}>{post.petName}</div>
           <div style={{ color: "#999", fontSize: 13 }}>{post.species} · {post.gender} · {post.time}</div>
@@ -190,7 +243,8 @@ function HomePage({ user, pet }) {
     setLoading(true);
     await addDoc(collection(db, "posts"), {
       petName: pet.name, species: pet.species, gender: pet.gender,
-      emoji: pet.emoji, ownerId: user.uid, content: text, likes: [], createdAt: new Date(),
+      emoji: pet.emoji, photoURL: pet.photoURL || null,
+      ownerId: user.uid, content: text, likes: [], createdAt: new Date(),
     });
     setText("");
     await loadPosts();
@@ -210,8 +264,9 @@ function HomePage({ user, pet }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
           <h1 style={{ color: "#D85A30", fontSize: 28, margin: 0 }}>🐾 PawBook</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ background: "white", borderRadius: 999, padding: "6px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", fontSize: 14, fontWeight: 600 }}>
-              {pet.emoji} {pet.name}
+            <div style={{ background: "white", borderRadius: 999, padding: "6px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              <Avatar pet={pet} size={24} />
+              {pet.name}
             </div>
             <button onClick={() => signOut(auth)}
               style={{ background: "white", border: "none", borderRadius: 999, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#999", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
@@ -219,9 +274,10 @@ function HomePage({ user, pet }) {
             </button>
           </div>
         </div>
+
         <div style={{ background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 36 }}>{pet.emoji}</div>
+            <Avatar pet={pet} size={40} />
             <textarea value={text} onChange={e => setText(e.target.value)}
               placeholder={`${pet.name}今天想說什麼？`} rows={3}
               style={{ flex: 1, border: "1px solid #eee", borderRadius: 12, padding: 12, fontSize: 14, resize: "none", outline: "none", fontFamily: "inherit" }} />
@@ -233,6 +289,7 @@ function HomePage({ user, pet }) {
             </button>
           </div>
         </div>
+
         {posts.map(post => (
           <PostCard key={post.id} post={post} currentUser={user} onLike={handleLike} />
         ))}
